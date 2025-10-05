@@ -1,14 +1,16 @@
 from flask import Flask, jsonify, render_template
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import requests
 from bs4 import BeautifulSoup
 from math import gcd
-import json # jsonモジュールはデータ構造の確認のために残す
+import json
 
 app = Flask(__name__)
 
-# --- 設定項目（BASE_URLは設定されていなかったため、プレースホルダーURLを使用）---
-# 🌐 WebサービスのルートURLに合わせて静的ファイルのパスを設定
+# 日本時間（JST）のタイムゾーン定義
+JST = timezone(timedelta(hours=9))
+
+# --- 設定項目 ---
 BASE_URL_PLACEHOLDER = "/static"
 
 TARGET_SITES = [
@@ -78,12 +80,19 @@ TARGET_SITES = [
 ]
 # -----------------
 
-# 状態管理のための辞書（ファイルI/Oの代わりに使用）
-# 最後のスクレイピング結果と実行時刻を保存
+# 状態管理のための辞書
 SCRAPED_DATA_CACHE = {
     'last_updated': None,
     'data': None
 }
+
+def get_jst_now():
+    """現在の日本時間を取得"""
+    return datetime.now(JST)
+
+def get_jst_today_str(date_format='%Y/%m/%d'):
+    """今日の日付を日本時間で取得"""
+    return get_jst_now().strftime(date_format)
 
 # --- スクレピング関数の定義 ---
 
@@ -117,7 +126,7 @@ def get_post_count_from_element(site):
 
 def get_today_post_count_from_paging_site(site):
     """ ページングされた掲示板を巡回し、今日の投稿数を集計する """
-    today_str = datetime.now().strftime(site['date_format'])
+    today_str = get_jst_today_str(site['date_format'])
     today_post_count = 0
     headers = {'User-Agent': 'MyPagingScraper/1.0'}
 
@@ -171,7 +180,7 @@ def get_today_post_count_from_paging_site(site):
 
 def get_today_post_count_with_gender(site):
     """ 性別ごとに今日の投稿数を集計する """
-    today_str = datetime.now().strftime(site['date_format'])
+    today_str = get_jst_today_str(site['date_format'])
     gender_count = {'男性': 0, '女性': 0, '不明': 0}
     headers = {'User-Agent': 'MyPagingScraper/1.0'}
 
@@ -220,10 +229,8 @@ def get_today_post_count_with_gender(site):
                 # 古い日付に達したら停止
                 try:
                     if datetime.strptime(post_date_str, site['date_format']) < datetime.strptime(today_str, site['date_format']):
-                         # 同じページ内に今日の日付の投稿が残っている可能性を考慮し、ページ全体でループを抜ける
                         break
                 except ValueError:
-                    # 日付パースエラーはスキップ
                     continue
             
             if not is_today_post_found_on_page and page_num > site['start_page']:
@@ -272,8 +279,9 @@ def scrape_data(force_run=False):
     cache = SCRAPED_DATA_CACHE
     
     # キャッシュの有効期限をチェック (1時間 = 3600秒)
+    now_jst = get_jst_now()
     is_cache_stale = (cache['last_updated'] is None or 
-                      (datetime.now() - cache['last_updated']).total_seconds() > 3600)
+                      (now_jst - cache['last_updated']).total_seconds() > 3600)
     
     if not force_run and not is_cache_stale:
         print("Returning data from cache.")
@@ -301,12 +309,12 @@ def scrape_data(force_run=False):
             })
 
     final_data = {
-        'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'last_updated': now_jst.strftime('%Y-%m-%d %H:%M:%S'),
         'post_data': results
     }
     
     # キャッシュを更新
-    SCRAPED_DATA_CACHE['last_updated'] = datetime.now()
+    SCRAPED_DATA_CACHE['last_updated'] = now_jst
     SCRAPED_DATA_CACHE['data'] = final_data
     
     return final_data
@@ -316,14 +324,12 @@ def scrape_data(force_run=False):
 @app.route('/')
 def index():
     """トップページ（index.html）を表示する"""
-    # テンプレートファイルが必要です
     return render_template('index.html')
 
 @app.route('/api/posts')
 def get_posts():
     """キャッシュされた、または新規にスクレイピングしたデータを返すAPI"""
     try:
-        # キャッシュが有効ならそれを使用、そうでなければスクレイピング実行 (force_run=False)
         data = scrape_data(force_run=False)
         return jsonify(data)
     except Exception as e:
@@ -334,7 +340,6 @@ def get_posts():
 def force_refresh():
     """強制的にスクレイピングを実行し、最新のデータを返すAPI"""
     try:
-        # 強制的にスクレイピングを実行 (force_run=True)
         data = scrape_data(force_run=True)
         return jsonify(data)
     except Exception as e:
@@ -342,6 +347,4 @@ def force_refresh():
         return jsonify({'error': f'強制更新中にエラーが発生しました: {e}'}), 500
 
 if __name__ == '__main__':
-    # 開発環境で実行する場合の注意: 
-    # Flaskのデフォルトのreloaderはプロセスを再起動するため、SCRAPED_DATA_CACHEもリセットされます。
     app.run(debug=True, host='0.0.0.0')
