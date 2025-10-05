@@ -1,0 +1,180 @@
+body { 
+    font-family: sans-serif; 
+    max-width: 1200px; 
+    margin: 2em auto; 
+    padding: 0 1em;
+    background-color: #1a1a1a;
+    color: #fff;
+}
+
+h1 { 
+    color: #fff;
+    text-align: center;
+    font-size: 2em;
+    margin-bottom: 1.5em;
+}
+
+.container { 
+    background-color: #2a2a2a; 
+    border-radius: 12px; 
+    padding: 2em; 
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5em;
+    margin-bottom: 2em;
+    padding-left: 0;
+}
+
+.card {
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 12px;
+    padding: 2em;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s, box-shadow 0.3s;
+    overflow: hidden;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.card-content {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+}
+
+.card-title {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin-bottom: 0.5em;
+    color: #fff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.card-title a {
+    color: #fff;
+    text-decoration: none;
+}
+
+.card-title a:hover {
+    text-decoration: underline;
+}
+
+.card-count {
+    font-size: 3em;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    margin: 0.3em 0;
+}
+
+.gender-detail {
+    display: flex;
+    justify-content: center;
+    gap: 1em;
+    flex-wrap: wrap;
+    margin-top: 1em;
+}
+
+.gender-item {
+    padding: 0.4em 0.8em;
+    border-radius: 20px;
+    background-color: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    font-size: 0.9em;
+    font-weight: 500;
+}
+
+.gender-ratio {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #fff;
+    padding: 0.4em 0.8em;
+    background-color: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    margin-top: 0.5em;
+}
+
+.loading-card {
+    background: linear-gradient(135deg, #555 0%, #777 100%);
+}
+
+.error-card {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+}
+
+.remarks {
+    margin-top: 1.5em;
+    padding: 1em;
+    background-color: #3a3a3a;
+    border-radius: 8px;
+    font-size: 0.9em;
+    border-left: 4px solid #667eea;
+}
+
+.remarks p {
+    margin: 0.5em 0;
+    color: #ccc;
+}
+
+.updated-time { 
+    text-align: right; 
+    font-size: 0.8em; 
+    color: #999; 
+    margin-top: 1em; 
+}
+
+.button-container { 
+    margin-top: 1.5em; 
+    text-align: center; 
+}
+
+#reload {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    font-size: 1em;
+    font-weight: bold;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+#reload:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+#reload:disabled {
+    background: linear-gradient(135deg, #555 0%, #777 100%);
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+@media (max-width: 768px) {
+    .card-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .card-count {
+        font-size: 2.5em;
+    }
+}
