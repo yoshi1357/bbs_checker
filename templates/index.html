@@ -3,50 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>掲示板書き込み数チェッカー</title>
-    <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 2em auto; padding: 0 1em; }
-        h1 { color: #333; }
-        .container { background-color: #f9f9f9; border-radius: 8px; padding: 1em; }
-        .post-list { list-style: none; padding: 0; }
-        .post-list li { display: flex; justify-content: space-between; padding: 0.8em; border-bottom: 1px solid #eee; }
-        .post-list li:last-child { border-bottom: none; }
-        .site-name { font-weight: bold; }
-        .post-count { font-size: 1.2em; color: #007bff; }
-        .updated-time { text-align: right; font-size: 0.8em; color: #777; margin-top: 1em; }
-        
-        /* ボタンのスタイル */
-        .button-container { margin-top: 1.5em; text-align: center; }
-        #reload {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-size: 1em;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        #reload:hover {
-            background-color: #0056b3;
-        }
-        #reload:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
-        
-        /* ローディング表示 */
-        .loading {
-            color: #999;
-            font-style: italic;
-        }
-        
-        /* エラー表示 */
-        .error {
-            color: #d9534f;
-            font-weight: bold;
-        }
-    </style>
+    <title>ハプニングバー/掲示板書き込み数チェッカー</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container">
@@ -54,81 +12,16 @@
         <ul class="post-list" id="post-list">
             <li class="loading">データを読み込んでいます...</li>
         </ul>
+        <div class="remarks" id="remarks">
+            <p>ノンハプバーもぐらは「本日のいいね指数！」を表示しています</p>
+            <p>カネロ、リトリートバー、バーフェイスは「女性」または「性別がわからない」書き込み数を表示しています</p>
+        </div>
         <p class="updated-time" id="updated-time"></p>
         <div class="button-container">
             <button id="reload">更新</button>
         </div>
     </div>
 
-    <script>
-        // APIからデータを取得して画面に表示するJavaScript
-        async function fetchData(forceRefresh = false) {
-            const postList = document.getElementById('post-list');
-            const updatedTime = document.getElementById('updated-time');
-            const reloadButton = document.getElementById('reload');
-            
-            // ローディング表示
-            postList.innerHTML = '<li class="loading">データを読み込んでいます...</li>';
-            updatedTime.textContent = '';
-            reloadButton.disabled = true;
-            reloadButton.textContent = '読み込み中...';
-            
-            try {
-                // forceRefreshがtrueの場合は/api/refresh、falseの場合は/api/posts
-                const endpoint = forceRefresh ? '/api/refresh' : '/api/posts';
-                const response = await fetch(endpoint);
-                
-                if (!response.ok) {
-                    throw new Error('データの取得に失敗しました。');
-                }
-                
-                const result = await response.json();
-                console.log('API Response:', result);
-                
-                // /api/refreshの場合はresult.dataにデータが入っている
-                const data = forceRefresh && result.data ? result.data : result;
-                
-                // データ構造の確認
-                if (!data || !data.post_data) {
-                    throw new Error('データ形式が正しくありません。');
-                }
-                
-                // リストをクリア
-                postList.innerHTML = '';
-
-                // 取得したデータでリスト項目を作成
-                data.post_data.forEach(site => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `
-                        <span class="site-name">${site.display_name}</span>
-                        <span class="post-count">${site.count}</span>
-                    `;
-                    postList.appendChild(li);
-                });
-
-                // 更新日時を表示
-                updatedTime.textContent = `最終更新: ${data.last_updated}`;
-
-            } catch (error) {
-                postList.innerHTML = `<li class="error">エラー: ${error.message}</li>`;
-                console.error('Fetch error:', error);
-            } finally {
-                // ボタンを再度有効化
-                reloadButton.disabled = false;
-                reloadButton.textContent = '更新';
-            }
-        }
-
-        // ページが読み込まれたらデータを取得
-        window.addEventListener('DOMContentLoaded', () => {
-            fetchData(false);
-        });
-
-        // 更新ボタンクリック時の処理
-        const reloadButton = document.getElementById('reload');
-        reloadButton.addEventListener('click', () => {
-            fetchData(true);
-        });
-    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
-</html> 
+</html>

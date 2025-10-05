@@ -1,0 +1,154 @@
+body { 
+    font-family: sans-serif; 
+    max-width: 600px; 
+    margin: 2em auto; 
+    padding: 0 1em; 
+}
+
+h1 { 
+    color: #333; 
+}
+
+.container { 
+    background-color: #f9f9f9; 
+    border-radius: 8px; 
+    padding: 1em; 
+}
+
+.post-list { 
+    list-style: none; 
+    padding: 0; 
+}
+
+.post-list li { 
+    display: flex; 
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8em; 
+    border-bottom: 1px solid #eee; 
+}
+
+.post-list li:last-child { 
+    border-bottom: none; 
+}
+
+.site-info {
+    flex: 1;
+}
+
+.site-name { 
+    font-weight: bold;
+    display: block;
+    margin-bottom: 0.5em;
+}
+
+.site-name a {
+    color: #007bff;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.site-name a:hover {
+    color: #0056b3;
+    text-decoration: underline;
+}
+
+.gender-detail {
+    display: flex;
+    gap: 0.8em;
+    flex-wrap: wrap;
+    font-size: 0.85em;
+    margin-top: 0.3em;
+}
+
+.gender-item {
+    padding: 0.2em 0.5em;
+    border-radius: 3px;
+    background-color: #f0f0f0;
+}
+
+.gender-item.male {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.gender-item.female {
+    background-color: #fce4ec;
+    color: #c2185b;
+}
+
+.gender-item.unknown {
+    background-color: #fff3e0;
+    color: #f57c00;
+}
+
+.gender-ratio {
+    font-weight: bold;
+    color: #333;
+    padding: 0.2em 0.5em;
+    background-color: #e8f5e9;
+    border-radius: 3px;
+}
+
+.post-count { 
+    font-size: 1.2em; 
+    color: #007bff; 
+}
+
+.remarks {
+    margin-top: 1.5em;
+    padding: 1em;
+    background-color: #fff3cd;
+    border-radius: 5px;
+    font-size: 0.9em;
+}
+
+.remarks p {
+    margin: 0.5em 0;
+    color: #856404;
+}
+
+.updated-time { 
+    text-align: right; 
+    font-size: 0.8em; 
+    color: #777; 
+    margin-top: 1em; 
+}
+
+/* ボタンのスタイル */
+.button-container { 
+    margin-top: 1.5em; 
+    text-align: center; 
+}
+
+#reload {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 1em;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#reload:hover {
+    background-color: #0056b3;
+}
+
+#reload:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* ローディング表示 */
+.loading {
+    color: #999;
+    font-style: italic;
+}
+
+/* エラー表示 */
+.error {
+    color: #d9534f;
+    font-weight: bold;
+}
