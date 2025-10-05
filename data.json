@@ -1,52 +1,57 @@
 {
-  "last_updated": "2025-10-05 13:58:21",
+  "last_updated": "2025-10-05 15:34:18",
   "post_data": [
     {
       "display_name": "ノンハプバーもぐら",
-      "count": "21人",
+      "count": "32人",
       "url": "https://member.nonhapumogura.com/",
-      "type": "simple"
+      "type": "simple",
+      "image_url": "http://127.0.0.1:5000/static/images/mogura.png"
     },
     {
       "display_name": "440",
-      "count": "60件",
+      "count": "74件",
       "url": "https://rara.jp/bar440/",
-      "type": "simple"
+      "type": "simple",
+      "image_url": "http://127.0.0.1:5000/static/images/440.png"
     },
     {
       "display_name": "カネロ",
-      "count": "23件",
+      "count": "27件",
       "url": "https://barcanelo.com/bbs/index.php?page=0",
       "type": "gender",
+      "image_url": "http://127.0.0.1:5000/static/images/canelo.png",
       "gender_detail": {
-        "male": 6,
-        "female": 8,
-        "unknown": 9,
-        "ratio": "3:4"
+        "male": 8,
+        "female": 9,
+        "unknown": 10,
+        "ratio": "8:9"
       }
     },
     {
       "display_name": "リトリートバー",
-      "count": "14件",
+      "count": "15件",
       "url": "https://retreatbar.jp/bbs/index.php?page=0",
       "type": "gender",
+      "image_url": "http://127.0.0.1:5000/static/images/retreatbar.png",
       "gender_detail": {
         "male": 5,
-        "female": 6,
+        "female": 7,
         "unknown": 3,
-        "ratio": "5:6"
+        "ratio": "5:7"
       }
     },
     {
       "display_name": "バーフェイス",
-      "count": "24件",
+      "count": "26件",
       "url": "https://bar-face.jp/bbs/index.php?page=0",
       "type": "gender",
+      "image_url": "http://127.0.0.1:5000/static/images/bar-face.png",
       "gender_detail": {
-        "male": 8,
-        "female": 11,
+        "male": 9,
+        "female": 12,
         "unknown": 5,
-        "ratio": "8:11"
+        "ratio": "3:4"
       }
     }
   ]

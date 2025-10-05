@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import json
 from datetime import datetime
 from math import gcd
+import config
 
 # --- 設定項目 ---
 TARGET_SITES = [
@@ -11,7 +12,8 @@ TARGET_SITES = [
         'display_name': 'ノンハプバーもぐら',
         'name': 'mogura',
         'url': 'https://member.nonhapumogura.com/',
-        'selector': '#count-num'
+        'selector': '#count-num',
+        'image_url': config.BASE_URL + '/static/images/mogura.png'
     },
     {
         'type': 'paging_bbs',
@@ -23,7 +25,8 @@ TARGET_SITES = [
         'max_page': 10,
         'step': 1,
         'date_selector': 'i.fa-solid.fa-clock',
-        'date_format': '%Y/%m/%d'
+        'date_format': '%Y/%m/%d',
+        'image_url': config.BASE_URL + '/static/images/440.png'
     },
     {
         'type': 'paging_bbs_gender',
@@ -36,7 +39,8 @@ TARGET_SITES = [
         'step': 10,
         'date_selector': 'span.date',
         'gender_selector': 'span.sex',
-        'date_format': '%Y/%m/%d'
+        'date_format': '%Y/%m/%d',
+        'image_url': config.BASE_URL + '/static/images/canelo.png'
     },
     {
         'type': 'paging_bbs_gender',
@@ -49,7 +53,8 @@ TARGET_SITES = [
         'step': 10,
         'date_selector': 'span.date',
         'gender_selector': 'span.sex',
-        'date_format': '%Y/%m/%d'
+        'date_format': '%Y/%m/%d',
+        'image_url': config.BASE_URL + '/static/images/retreatbar.png'
     },
     {
         'type': 'paging_bbs_gender',
@@ -62,7 +67,8 @@ TARGET_SITES = [
         'step': 10,
         'date_selector': 'span.date',
         'gender_selector': 'span.sex',
-        'date_format': '%Y/%m/%d'
+        'date_format': '%Y/%m/%d',
+        'image_url': config.BASE_URL + '/static/images/bar-face.png'
     },
 ]
 # -----------------
@@ -91,7 +97,8 @@ def get_post_count_from_element(site):
         'display_name': site['display_name'],
         'count': display_text,
         'url': site['url'],
-        'type': 'simple'
+        'type': 'simple',
+        'image_url': site['image_url']
     }
 
 def get_today_post_count_from_paging_site(site):
@@ -143,7 +150,8 @@ def get_today_post_count_from_paging_site(site):
         'display_name': site['display_name'],
         'count': display_text,
         'url': site['base_url'],
-        'type': 'simple'
+        'type': 'simple',
+        'image_url' : site['image_url']
     }
 
 def get_today_post_count_with_gender(site):
@@ -237,6 +245,7 @@ def get_today_post_count_with_gender(site):
         'count': f"{total}件",
         'url': site['base_url'],
         'type': 'gender',
+        'image_url' : site['image_url'],
         'gender_detail': {
             'male': gender_count['男性'],
             'female': gender_count['女性'],

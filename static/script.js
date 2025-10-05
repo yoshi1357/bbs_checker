@@ -5,13 +5,12 @@ async function fetchData(forceRefresh = false) {
     const reloadButton = document.getElementById('reload');
     
     // ローディング表示
-    postList.innerHTML = '<li class="loading">データを読み込んでいます...</li>';
+    postList.innerHTML = '<div class="card loading-card"><div class="card-content"><p>データを読み込んでいます...</p></div></div>';
     updatedTime.textContent = '';
     reloadButton.disabled = true;
     reloadButton.textContent = '読み込み中...';
     
     try {
-        // forceRefreshがtrueの場合は/api/refresh、falseの場合は/api/posts
         const endpoint = forceRefresh ? '/api/refresh' : '/api/posts';
         const response = await fetch(endpoint);
         
@@ -22,71 +21,81 @@ async function fetchData(forceRefresh = false) {
         const result = await response.json();
         console.log('API Response:', result);
         
-        // /api/refreshの場合はresult.dataにデータが入っている
         const data = forceRefresh && result.data ? result.data : result;
         
-        // データ構造の確認
         if (!data || !data.post_data) {
             throw new Error('データ形式が正しくありません。');
         }
-        
-        // リストをクリア
-        postList.innerHTML = '';
 
-        // 取得したデータでリスト項目を作成
+        updatedTime.textContent = `最終更新: ${data.last_updated}`;
+        
+        // カードグリッドをクリア
+        postList.innerHTML = '';
+        postList.className = 'card-grid'
+
+        // 各サイトのカードを作成
         data.post_data.forEach(site => {
-            const li = document.createElement('li');
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.backgroundImage = `url('${site.image_url}')`;
+
+            const cardContent = document.createElement('div');
+            cardContent.className = 'card-content';
             
-            // 店名にリンクを追加
-            const siteName = site.url 
-                ? `<a href="${site.url}" target="_blank" rel="noopener noreferrer">${site.display_name}</a>`
-                : site.display_name;
-            
-            // 性別情報がある場合は詳細表示
-            if (site.type === 'gender' && site.gender_detail) {
-                const detail = site.gender_detail;
-                li.innerHTML = `
-                    <div class="site-info">
-                        <span class="site-name">${siteName}</span>
-                        <div class="gender-detail">
-                            <span class="gender-item male">👨 ${detail.male}件</span>
-                            <span class="gender-item female">👩 ${detail.female}件</span>
-                            <span class="gender-item unknown">❓ ${detail.unknown}件</span>
-                            <span class="gender-ratio">予想男女比 = ${detail.ratio}</span>
-                        </div>
-                    </div>
-                    <span class="post-count">${site.count}</span>
-                `;
+            // 店名
+            const titleElement = document.createElement('div');
+            titleElement.className = 'card-title';
+            if (site.url) {
+                titleElement.innerHTML = `<a href="${site.url}" target="_blank" rel="noopener noreferrer">${site.display_name}</a>`;
             } else {
-                // 通常表示
-                li.innerHTML = `
-                    <span class="site-name">${siteName}</span>
-                    <span class="post-count">${site.count}</span>
-                `;
+                titleElement.textContent = site.display_name;
             }
             
-            postList.appendChild(li);
+            // 件数
+            const countElement = document.createElement('div');
+            countElement.className = 'card-count';
+            countElement.textContent = site.count;
+            
+            cardContent.appendChild(titleElement);
+            cardContent.appendChild(countElement);
+            
+            // 性別詳細がある場合
+            if (site.type === 'gender' && site.gender_detail) {
+                const detail = site.gender_detail;
+                
+                const genderDiv = document.createElement('div');
+                genderDiv.className = 'gender-detail';
+                
+                genderDiv.innerHTML = `
+                    <span class="gender-item">👨 ${detail.male}件</span>
+                    <span class="gender-item">👩 ${detail.female}件</span>
+                    <span class="gender-item">❓ ${detail.unknown}件</span>
+                `;
+                
+                const ratioElement = document.createElement('div');
+                ratioElement.className = 'gender-ratio';
+                ratioElement.textContent = `男女比率 ${detail.ratio}`;
+                
+                cardContent.appendChild(genderDiv);
+                cardContent.appendChild(ratioElement);
+            }
+            
+            card.appendChild(cardContent);
+            postList.appendChild(card);
         });
-
-        // 更新日時を表示
-        updatedTime.textContent = `最終更新: ${data.last_updated}`;
-
     } catch (error) {
-        postList.innerHTML = `<li class="error">エラー: ${error.message}</li>`;
+        postList.innerHTML = `<div class="card error-card"><div class="card-content"><p>エラー: ${error.message}</p></div></div>`;
         console.error('Fetch error:', error);
     } finally {
-        // ボタンを再度有効化
         reloadButton.disabled = false;
         reloadButton.textContent = '更新';
     }
 }
 
-// ページが読み込まれたらデータを取得
 window.addEventListener('DOMContentLoaded', () => {
     fetchData(false);
 });
 
-// 更新ボタンクリック時の処理
 const reloadButton = document.getElementById('reload');
 reloadButton.addEventListener('click', () => {
     fetchData(true);
