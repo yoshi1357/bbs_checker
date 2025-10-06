@@ -1,2 +1,4 @@
 .env
+.flaskenv
 data.json
+app.cpython*.pyc

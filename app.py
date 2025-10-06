@@ -31,7 +31,7 @@ TARGET_SITES = [
         'start_page': 1,
         'max_page': 10,
         'step': 1,
-        'date_selector': 'i.fa-solid.fa-clock',
+        'date_selector': 'div.user-meta',
         'date_format': '%Y/%m/%d',
         'image_url': BASE_URL_PLACEHOLDER + '/images/440.png'
     },
@@ -141,22 +141,21 @@ def get_today_post_count_from_paging_site(site):
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            post_times = soup.select(site['date_selector'])
+            posts = soup.select('table.layer_pop')
             
-            if not post_times:
+            if not posts:
                 print("    -> No date info found. Stopping.")
                 break
 
             is_today_post_found_on_page = False
-            for time_element in post_times:
-                post_datetime_str = ''
+            for post in posts:
                 if site['name'] == '440':
-                    next_node = time_element.next_sibling
-                    if next_node and next_node.string:
-                        post_datetime_str = next_node.string.strip()
-                else:
-                    post_datetime_str = time_element.text.strip()
-                
+                    post_user_name = post.select_one('div.user-name').text.strip()
+                    post_datetime_str = post.select_one(site['date_selector']).text.strip()
+                    if '440' in post_user_name:
+                        # お店の書き込みは除く
+                        continue
+
                 if today_str in post_datetime_str:
                     today_post_count += 1
                     is_today_post_found_on_page = True

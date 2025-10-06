@@ -114,6 +114,10 @@ h1 {
     background: linear-gradient(135deg, #555 0%, #777 100%);
 }
 
+#post-list {
+    padding-left: 0px;
+}
+
 .error-card {
     background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
 }
