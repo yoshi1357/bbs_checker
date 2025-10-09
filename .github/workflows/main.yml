@@ -1,0 +1,17 @@
+name: Daily Batch at 19:00 JST
+
+on:
+  schedule:
+    - cron: '0 10 * * *'  # UTC 10:00 = JST 19:00
+  workflow_dispatch:
+
+jobs:
+  batch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: pip install -r requirements.txt
+      - run: python daily_batch.py
