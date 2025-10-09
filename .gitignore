@@ -1,4 +1,16 @@
 .env
 .flaskenv
 data.json
-app.cpython*.pyc
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+data.json
+*.log
+posts_data.db
+*.db
+*.sqlite
+*.sqlite3

@@ -1,14 +1,46 @@
 from flask import Flask, jsonify, render_template
 from datetime import datetime, timezone, timedelta
+from apscheduler.schedulers.background import BackgroundScheduler
 import requests
 from bs4 import BeautifulSoup
 from math import gcd
 import json
+import atexit
+import db_manager
+from daily_batch import run_daily_batch
+
 
 app = Flask(__name__)
 
 # 日本時間（JST）のタイムゾーン定義
 JST = timezone(timedelta(hours=9))
+
+# データベース初期化
+db_manager.init_db()
+
+# スケジューラー設定
+scheduler = BackgroundScheduler(timezone='Asia/Tokyo')
+
+def scheduled_batch_job():
+    """スケジューラーから呼ばれるジョブ"""
+    print("Scheduled batch job triggered")
+    run_daily_batch()
+
+# 毎日19時に実行
+scheduler.add_job(
+    func=scheduled_batch_job,
+    trigger='cron',
+    hour=19,
+    minute=0,
+    id='daily_batch_job',
+    name='Daily post count batch',
+    replace_existing=True
+)
+
+scheduler.start()
+
+# アプリケーション終了時にスケジューラーを停止
+atexit.register(lambda: scheduler.shutdown())
 
 # --- 設定項目 ---
 BASE_URL_PLACEHOLDER = "/static"
@@ -318,8 +350,30 @@ def scrape_data(force_run=False):
     
     return final_data
 
-# --- Flask ルート定義 ---
+def calculate_comparison(current_count, past_count):
+    """前回との比較を計算"""
+    if past_count is None or past_count == 0:
+        return {
+            'diff': None,
+            'diff_text': '---',
+            'rate': None,
+            'rate_text': '---'
+        }
+    
+    diff = current_count - past_count
+    rate = ((current_count - past_count) / past_count) * 100
+    
+    diff_text = f"+{diff}" if diff > 0 else str(diff)
+    rate_text = f"+{rate:.1f}%" if rate > 0 else f"{rate:.1f}%"
+    
+    return {
+        'diff': diff,
+        'diff_text': diff_text,
+        'rate': rate,
+        'rate_text': rate_text
+    }
 
+# --- Flask ルート定義 ---
 @app.route('/')
 def index():
     """トップページ（index.html）を表示する"""
@@ -345,5 +399,67 @@ def force_refresh():
         print(f"API Error in force_refresh: {e}")
         return jsonify({'error': f'強制更新中にエラーが発生しました: {e}'}), 500
 
+@app.route('/api/comparison')
+def get_comparison():
+    """前日・前週同曜日との比較データを返すAPI"""
+    try:
+        today = get_jst_now().strftime('%Y-%m-%d')
+        comparisons = db_manager.get_all_sites_comparison(today)
+        
+        # 現在のデータも含めて返す
+        result = {}
+        for site_name, comp_data in comparisons.items():
+            # 今日のデータを取得
+            today_data = db_manager.get_data_by_date(site_name, today)
+            
+            if today_data:
+                # 前日との比較
+                yesterday_comp = calculate_comparison(
+                    today_data['total_count'],
+                    comp_data['yesterday']['total_count'] if comp_data['yesterday'] else None
+                )
+                
+                # 前週同曜日との比較
+                last_week_comp = calculate_comparison(
+                    today_data['total_count'],
+                    comp_data['last_week']['total_count'] if comp_data['last_week'] else None
+                )
+                
+                result[site_name] = {
+                    'today': today_data,
+                    'yesterday': comp_data['yesterday'],
+                    'last_week': comp_data['last_week'],
+                    'yesterday_comparison': yesterday_comp,
+                    'last_week_comparison': last_week_comp
+                }
+        
+        return jsonify(result)
+    except Exception as e:
+        print(f"API Error in get_comparison: {e}")
+        return jsonify({'error': f'比較データの取得中にエラーが発生しました: {e}'}), 500
+
+@app.route('/api/history/<site_name>')
+def get_history(site_name):
+    """特定サイトの履歴データを返すAPI"""
+    try:
+        days = request.args.get('days', 7, type=int)
+        history = db_manager.get_recent_history(site_name, days)
+        return jsonify(history)
+    except Exception as e:
+        print(f"API Error in get_history: {e}")
+        return jsonify({'error': f'履歴データの取得中にエラーが発生しました: {e}'}), 500
+
+@app.route('/api/batch/run')
+def manual_batch_run():
+    """手動でバッチを実行するAPI（テスト用）"""
+    try:
+        results = run_daily_batch()
+        return jsonify({'status': 'success', 'results': results})
+    except Exception as e:
+        print(f"Batch Error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 if __name__ == '__main__':
+    print(f"Scheduler started. Next batch run at 19:00 JST")
+    print(f"Jobs: {scheduler.get_jobs()}")
     app.run(debug=True, host='0.0.0.0')

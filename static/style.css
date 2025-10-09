@@ -173,6 +173,46 @@ h1 {
     transform: none;
 }
 
+.comparison-info {
+    margin-top: 1em;
+    padding: 0.8em;
+    background-color: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    font-size: 0.9em;
+}
+
+.comparison-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0.3em 0;
+}
+
+.comparison-label {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.85em;
+}
+
+.comparison-value {
+    font-weight: bold;
+    padding: 0.2em 0.5em;
+    border-radius: 4px;
+}
+
+.comparison-value.positive {
+    color: #4ade80;
+    background-color: rgba(74, 222, 128, 0.2);
+}
+
+.comparison-value.negative {
+    color: #f87171;
+    background-color: rgba(248, 113, 113, 0.2);
+}
+
+.comparison-value.neutral {
+    color: #a8a8a8;
+}
+
 @media (max-width: 768px) {
     .card-grid {
         grid-template-columns: 1fr;

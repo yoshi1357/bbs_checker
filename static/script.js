@@ -79,16 +79,93 @@ async function fetchData(forceRefresh = false) {
                 cardContent.appendChild(genderDiv);
                 cardContent.appendChild(ratioElement);
             }
-            
+
+            if (site.comparison) {
+                const comparisonDiv = document.createElement('div');
+                comparisonDiv.className = 'comparison-info';
+                
+                const yesterdayComp = site.comparison.yesterday_comparison;
+                const lastWeekComp = site.comparison.last_week_comparison;
+                
+                comparisonDiv.innerHTML = `
+                    <div class="comparison-row">
+                        <span class="comparison-label">前日比:</span>
+                        <span class="comparison-value ${yesterdayComp.diff > 0 ? 'positive' : yesterdayComp.diff < 0 ? 'negative' : 'neutral'}">
+                            ${yesterdayComp.diff_text} (${yesterdayComp.rate_text})
+                        </span>
+                    </div>
+                    <div class="comparison-row">
+                        <span class="comparison-label">前週比:</span>
+                        <span class="comparison-value ${lastWeekComp.diff > 0 ? 'positive' : lastWeekComp.diff < 0 ? 'negative' : 'neutral'}">
+                            ${lastWeekComp.diff_text} (${lastWeekComp.rate_text})
+                        </span>
+                    </div>
+                `;
+                
+                cardContent.appendChild(comparisonDiv);
+            }
+
             card.appendChild(cardContent);
             postList.appendChild(card);
         });
+
+        // 比較データも取得
+        fetchComparison();
     } catch (error) {
         postList.innerHTML = `<div class="card error-card"><div class="card-content"><p>エラー: ${error.message}</p></div></div>`;
         console.error('Fetch error:', error);
     } finally {
         reloadButton.disabled = false;
         reloadButton.textContent = '更新';
+    }
+}
+
+async function fetchComparison() {
+    try {
+        const response = await fetch('/api/comparison');
+        if (!response.ok) return;
+        
+        const comparisons = await response.json();
+        console.log('Comparison data:', comparisons);
+        
+        // 各カードに比較情報を追加
+        const cards = document.querySelectorAll('.card');
+        cards.forEach(card => {
+            const siteName = card.querySelector('.card-title')?.textContent.trim();
+            if (!siteName || !comparisons[siteName]) return;
+            
+            const comp = comparisons[siteName];
+            const cardContent = card.querySelector('.card-content');
+            
+            // 既存の比較情報を削除
+            const existingComp = cardContent.querySelector('.comparison-info');
+            if (existingComp) existingComp.remove();
+            
+            const comparisonDiv = document.createElement('div');
+            comparisonDiv.className = 'comparison-info';
+            
+            const yesterdayComp = comp.yesterday_comparison;
+            const lastWeekComp = comp.last_week_comparison;
+            
+            comparisonDiv.innerHTML = `
+                <div class="comparison-row">
+                    <span class="comparison-label">前日比:</span>
+                    <span class="comparison-value ${yesterdayComp.diff > 0 ? 'positive' : yesterdayComp.diff < 0 ? 'negative' : 'neutral'}">
+                        ${yesterdayComp.diff_text} (${yesterdayComp.rate_text})
+                    </span>
+                </div>
+                <div class="comparison-row">
+                    <span class="comparison-label">前週比:</span>
+                    <span class="comparison-value ${lastWeekComp.diff > 0 ? 'positive' : lastWeekComp.diff < 0 ? 'negative' : 'neutral'}">
+                        ${lastWeekComp.diff_text} (${lastWeekComp.rate_text})
+                    </span>
+                </div>
+            `;
+            
+            cardContent.appendChild(comparisonDiv);
+        });
+    } catch (error) {
+        console.error('Comparison fetch error:', error);
     }
 }
 
