@@ -78,6 +78,14 @@ TARGET_SITES = [
         'date_format': '%Y/%m/%d',
         'image_url': BASE_URL_PLACEHOLDER + '/images/bar-face.png'
     },
+    {
+        'type': 'element',
+        'display_name': 'カラーズバー',
+        'name': 'colors',
+        'url': 'https://t-colors.net/',
+        'selector': 'span.sum',
+        'image_url': BASE_URL_PLACEHOLDER + '/images/colors.png'
+    },
 ]
 
 # データベース設定
