@@ -1,19 +1,17 @@
-from flask import Flask, jsonify, render_template
-from datetime import datetime, timezone, timedelta
+from flask import Flask, jsonify, render_template, request
 from apscheduler.schedulers.background import BackgroundScheduler
-import requests
-from bs4 import BeautifulSoup
-from math import gcd
-import json
 import atexit
 import db_manager
 from daily_batch import run_daily_batch
-
+from config import TARGET_SITES, JST, BATCH_HOUR, BATCH_MINUTE, CACHE_EXPIRATION
+from scraper_utils import (
+    get_jst_now,
+    get_post_count_from_element,
+    get_today_post_count_from_paging_site,
+    get_today_post_count_with_gender
+)
 
 app = Flask(__name__)
-
-# 日本時間（JST）のタイムゾーン定義
-JST = timezone(timedelta(hours=9))
 
 # データベース初期化
 db_manager.init_db()
@@ -26,12 +24,12 @@ def scheduled_batch_job():
     print("Scheduled batch job triggered")
     run_daily_batch()
 
-# 毎日19時に実行
+# 毎日指定時刻に実行
 scheduler.add_job(
     func=scheduled_batch_job,
     trigger='cron',
-    hour=19,
-    minute=0,
+    hour=BATCH_HOUR,
+    minute=BATCH_MINUTE,
     id='daily_batch_job',
     name='Daily post count batch',
     replace_existing=True
@@ -42,266 +40,11 @@ scheduler.start()
 # アプリケーション終了時にスケジューラーを停止
 atexit.register(lambda: scheduler.shutdown())
 
-# --- 設定項目 ---
-BASE_URL_PLACEHOLDER = "/static"
-
-TARGET_SITES = [
-    {
-        'type': 'element',
-        'display_name': 'ノンハプバーもぐら',
-        'name': 'mogura',
-        'url': 'https://member.nonhapumogura.com/',
-        'selector': '#count-num',
-        'image_url': BASE_URL_PLACEHOLDER + '/images/mogura.png'
-    },
-    {
-        'type': 'paging_bbs',
-        'display_name': '440',
-        'name': '440',
-        'base_url': 'https://rara.jp/bar440/',
-        'page_url_prefix': 'https://rara.jp/bar440/link',
-        'start_page': 1,
-        'max_page': 10,
-        'step': 1,
-        'date_selector': 'div.user-meta',
-        'date_format': '%Y/%m/%d',
-        'image_url': BASE_URL_PLACEHOLDER + '/images/440.png'
-    },
-    {
-        'type': 'paging_bbs_gender',
-        'display_name': 'カネロ',
-        'name': 'canelo',
-        'base_url': 'https://barcanelo.com/bbs/index.php?page=0',
-        'page_url_prefix': 'https://barcanelo.com/bbs/index.php?page=',
-        'start_page': 0,
-        'max_page': 10,
-        'step': 10,
-        'date_selector': 'span.date',
-        'gender_selector': 'span.sex',
-        'date_format': '%Y/%m/%d',
-        'image_url': BASE_URL_PLACEHOLDER + '/images/canelo.png'
-    },
-    {
-        'type': 'paging_bbs_gender',
-        'display_name': 'リトリートバー',
-        'name': 'retreatbar',
-        'base_url': 'https://retreatbar.jp/bbs/index.php?page=0',
-        'page_url_prefix': 'https://retreatbar.jp/bbs/index.php?page=',
-        'start_page': 0,
-        'max_page': 10,
-        'step': 10,
-        'date_selector': 'span.date',
-        'gender_selector': 'span.sex',
-        'date_format': '%Y/%m/%d',
-        'image_url': BASE_URL_PLACEHOLDER + '/images/retreatbar.png'
-    },
-    {
-        'type': 'paging_bbs_gender',
-        'display_name': 'バーフェイス',
-        'name': 'bar-face',
-        'base_url': 'https://bar-face.jp/bbs/index.php?page=0',
-        'page_url_prefix': 'https://bar-face.jp/bbs/index.php?page=',
-        'start_page': 0,
-        'max_page': 10,
-        'step': 10,
-        'date_selector': 'span.date',
-        'gender_selector': 'span.sex',
-        'date_format': '%Y/%m/%d',
-        'image_url': BASE_URL_PLACEHOLDER + '/images/bar-face.png'
-    },
-]
-# -----------------
-
 # 状態管理のための辞書
 SCRAPED_DATA_CACHE = {
     'last_updated': None,
     'data': None
 }
-
-def get_jst_now():
-    """現在の日本時間を取得"""
-    return datetime.now(JST)
-
-def get_jst_today_str(date_format='%Y/%m/%d'):
-    """今日の日付を日本時間で取得"""
-    return get_jst_now().strftime(date_format)
-
-# --- スクレピング関数の定義 ---
-
-def get_post_count_from_element(site):
-    """ 単一の要素から直接書き込み数を取得する """
-    print(f"Checking '{site['display_name']}'...")
-    headers = {'User-Agent': 'MyScraper/1.0'}
-    
-    try:
-        response = requests.get(site['url'], headers=headers, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
-        count_element = soup.select_one(site['selector'])
-        
-        display_text = count_element.text.strip() if count_element else '取得失敗'
-            
-    except requests.exceptions.RequestException as e:
-        print(f"  -> Error fetching {site['url']}: {e}")
-        display_text = 'エラー'
-    except Exception as e:
-        print(f"  -> Unexpected error: {e}")
-        display_text = '処理エラー'
-
-    return {
-        'display_name': site['display_name'],
-        'count': display_text,
-        'url': site['url'],
-        'type': 'simple',
-        'image_url': site['image_url']
-    }
-
-def get_today_post_count_from_paging_site(site):
-    """ ページングされた掲示板を巡回し、今日の投稿数を集計する """
-    today_str = get_jst_today_str(site['date_format'])
-    today_post_count = 0
-    headers = {'User-Agent': 'MyPagingScraper/1.0'}
-
-    print(f"Checking '{site['display_name']}' (Date: {today_str})...")
-
-    try:
-        for page_num in range(site['start_page'], site['max_page'] + 1, site['step']):
-            target_url = site['base_url'] if page_num == site['start_page'] else f"{site['page_url_prefix']}{page_num}"
-            print(f"  -> page {page_num} ({target_url})")
-
-            response = requests.get(target_url, headers=headers, timeout=10)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            posts = soup.select('table.layer_pop')
-            
-            if not posts:
-                print("    -> No date info found. Stopping.")
-                break
-
-            is_today_post_found_on_page = False
-            for post in posts:
-                if site['name'] == '440':
-                    post_user_name = post.select_one('div.user-name').text.strip()
-                    post_datetime_str = post.select_one(site['date_selector']).text.strip()
-                    if '440' in post_user_name:
-                        # お店の書き込みは除く
-                        continue
-
-                if today_str in post_datetime_str:
-                    today_post_count += 1
-                    is_today_post_found_on_page = True
-            
-            if not is_today_post_found_on_page and page_num > site['start_page']:
-                print("    -> No more posts for today. Stopping.")
-                break
-    except requests.exceptions.RequestException as e:
-        print(f"    -> Error: {e}")
-    except Exception as e:
-        print(f"    -> Unexpected error: {e}")
-    
-    display_text = f"{today_post_count}件"
-    return {
-        'display_name': site['display_name'],
-        'count': display_text,
-        'url': site['base_url'],
-        'type': 'simple',
-        'image_url' : site['image_url']
-    }
-
-def get_today_post_count_with_gender(site):
-    """ 性別ごとに今日の投稿数を集計する """
-    today_str = get_jst_today_str(site['date_format'])
-    gender_count = {'男性': 0, '女性': 0, '不明': 0}
-    headers = {'User-Agent': 'MyPagingScraper/1.0'}
-
-    print(f"Checking '{site['display_name']}' with gender (Date: {today_str})...")
-
-    try:
-        for page_num in range(site['start_page'], site['max_page'] + 1, site['step']):
-            target_url = site['base_url'] if page_num == site['start_page'] else f"{site['page_url_prefix']}{page_num}"
-            print(f"  -> page {page_num} ({target_url})")
-
-            response = requests.get(target_url, headers=headers, timeout=10)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            posts = soup.select('dl.contributor')
-            
-            if not posts:
-                print("    -> No posts found. Stopping.")
-                break
-
-            is_today_post_found_on_page = False
-            
-            for post in posts:
-                date_element = post.select_one(site['date_selector'])
-                if not date_element:
-                    continue
-                    
-                post_date_str = date_element.text.strip()
-                
-                if today_str in post_date_str:
-                    is_today_post_found_on_page = True
-                    
-                    gender_element = post.select_one(site['gender_selector'])
-                    if gender_element:
-                        gender_text = gender_element.text.strip()
-                        
-                        if '男' in gender_text or 'male' in gender_text.lower():
-                            gender_count['男性'] += 1
-                        elif '女' in gender_text or 'female' in gender_text.lower():
-                            gender_count['女性'] += 1
-                        else:
-                            gender_count['不明'] += 1
-                    else:
-                        gender_count['不明'] += 1
-                
-                # 古い日付に達したら停止
-                try:
-                    if datetime.strptime(post_date_str, site['date_format']) < datetime.strptime(today_str, site['date_format']):
-                        break
-                except ValueError:
-                    continue
-            
-            if not is_today_post_found_on_page and page_num > site['start_page']:
-                print("    -> No more posts for today. Stopping.")
-                break
-    except requests.exceptions.RequestException as e:
-        print(f"    -> Error: {e}")
-    except Exception as e:
-        print(f"    -> Unexpected error: {e}")
-
-    total = sum(gender_count.values())
-    
-    # 男女比を計算（最小の自然数比）
-    ratio = "計算不可"
-    if gender_count['男性'] > 0 and gender_count['女性'] > 0:
-        common_divisor = gcd(gender_count['男性'], gender_count['女性'])
-        male_ratio = gender_count['男性'] // common_divisor
-        female_ratio = gender_count['女性'] // common_divisor
-        ratio = f"{male_ratio}:{female_ratio}"
-    elif gender_count['男性'] > 0:
-        ratio = "男性のみ"
-    elif gender_count['女性'] > 0:
-        ratio = "女性のみ"
-    
-    print(f"  -> Total: {total}, Male: {gender_count['男性']}, Female: {gender_count['女性']}, Unknown: {gender_count['不明']}, Ratio: {ratio}")
-    
-    return {
-        'display_name': site['display_name'],
-        'count': f"{total}件",
-        'url': site['base_url'],
-        'type': 'gender',
-        'image_url' : site['image_url'],
-        'gender_detail': {
-            'male': gender_count['男性'],
-            'female': gender_count['女性'],
-            'unknown': gender_count['不明'],
-            'ratio': ratio
-        }
-    }
-
 
 def scrape_data(force_run=False):
     """ データをスクレイピングし、結果の辞書を返すメイン関数（キャッシュ機能付き） """
@@ -309,10 +52,10 @@ def scrape_data(force_run=False):
     global SCRAPED_DATA_CACHE
     cache = SCRAPED_DATA_CACHE
     
-    # キャッシュの有効期限をチェック (1時間 = 3600秒)
+    # キャッシュの有効期限をチェック
     now_jst = get_jst_now()
     is_cache_stale = (cache['last_updated'] is None or 
-                      (now_jst - cache['last_updated']).total_seconds() > 3600)
+                      (now_jst - cache['last_updated']).total_seconds() > CACHE_EXPIRATION)
     
     if not force_run and not is_cache_stale:
         print("Returning data from cache.")
@@ -324,11 +67,13 @@ def scrape_data(force_run=False):
     for site in TARGET_SITES:
         try:
             if site['type'] == 'element':
-                results.append(get_post_count_from_element(site))
+                result = get_post_count_from_element(site)
             elif site['type'] == 'paging_bbs':
-                results.append(get_today_post_count_from_paging_site(site))
+                result = get_today_post_count_from_paging_site(site)
             elif site['type'] == 'paging_bbs_gender':
-                results.append(get_today_post_count_with_gender(site))
+                result = get_today_post_count_with_gender(site)
+            
+            results.append(result)
         except Exception as e:
             print(f"An unexpected error occurred for {site['display_name']}: {e}")
             results.append({
@@ -374,6 +119,7 @@ def calculate_comparison(current_count, past_count):
     }
 
 # --- Flask ルート定義 ---
+
 @app.route('/')
 def index():
     """トップページ（index.html）を表示する"""
@@ -460,6 +206,6 @@ def manual_batch_run():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 if __name__ == '__main__':
-    print(f"Scheduler started. Next batch run at 19:00 JST")
+    print(f"Scheduler started. Next batch run at {BATCH_HOUR}:00 JST")
     print(f"Jobs: {scheduler.get_jobs()}")
     app.run(debug=True, host='0.0.0.0')

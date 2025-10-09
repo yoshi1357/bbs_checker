@@ -1,9 +1,7 @@
 import sqlite3
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from contextlib import contextmanager
-
-DB_PATH = 'posts_data.db'
-JST = timezone(timedelta(hours=9))
+from config import DB_PATH, JST
 
 @contextmanager
 def get_db_connection():
